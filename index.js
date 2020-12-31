@@ -18,6 +18,17 @@ class HLSRConsole {
 			this.client = spawn(this.spawn_paths[0], args);
 		}
 	}
+
+	getCustomization() {
+		let path1 = path.join(__dirname, "./customization");
+		let path2 = path.join(__dirname, "../../../app.asar.unpacked/node_modules/hlsr-console/customization");
+
+		if (fs.existsSync(path1)) {
+			return path1;
+		} else if(fs.existsSync(path2)) {
+			return path2;
+		}
+	}
 }
 
 module.exports = HLSRConsole;
