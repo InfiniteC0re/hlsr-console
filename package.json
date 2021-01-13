@@ -1,4 +1,32 @@
 {
+  "_args": [
+    [
+      "hlsr-console@1.0.3",
+      "D:\\_Projects\\hlsr"
+    ]
+  ],
+  "_from": "hlsr-console@1.0.3",
+  "_id": "hlsr-console@1.0.3",
+  "_inBundle": false,
+  "_integrity": "sha512-nhz1op+ac/fi2NiXva64mxWkNQxHND75vZL73rTdPHbzNmwsz9kP2lFPrMWcuoTXlCkkxwW5s98qhAvvA5Fqyw==",
+  "_location": "/hlsr-console",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "version",
+    "registry": true,
+    "raw": "hlsr-console@1.0.3",
+    "name": "hlsr-console",
+    "escapedName": "hlsr-console",
+    "rawSpec": "1.0.3",
+    "saveSpec": null,
+    "fetchSpec": "1.0.3"
+  },
+  "_requiredBy": [
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/hlsr-console/-/hlsr-console-1.0.3.tgz",
+  "_spec": "1.0.3",
+  "_where": "D:\\_Projects\\hlsr",
   "name": "hlsr-console",
   "version": "1.0.3"
 }

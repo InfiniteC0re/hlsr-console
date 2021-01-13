@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace hlsr_console
 {
@@ -89,21 +90,13 @@ namespace hlsr_console
 				}
 
 				if (args.Contains("-normal"))
-				{
 					priority = ProcessPriorityClass.Normal;
-				}
 				else if (args.Contains("-abovenormal"))
-				{
 					priority = ProcessPriorityClass.AboveNormal;
-				}
 				else if (args.Contains("-high"))
-				{
 					priority = ProcessPriorityClass.High;
-				}
 				else if (args.Contains("-realtime"))
-				{
 					priority = ProcessPriorityClass.RealTime;
-				}
 
 				ProcessStartInfo processStartInfo;
 
@@ -116,27 +109,17 @@ namespace hlsr_console
 				{
 					case "70":
 						if (steam)
-						{
 							processStartInfo.Arguments = "-game valve";
-						}
 						if (!steam)
-						{
 							processStartInfo.Arguments = "-game valve_WON";
-						}
 						if (!steam && dll)
-						{
 							processStartInfo.Arguments = "-game valve_WON_edited";
-						}
 						break;
 					case "50":
 						if (steam)
-						{
 							processStartInfo.Arguments = "-game gearbox";
-						}
 						if (!steam)
-						{
 							processStartInfo.Arguments = "-game gearbox_WON";
-						}
 						break;
 					case "130":
 						processStartInfo.Arguments = "-game bshift";
@@ -160,10 +143,19 @@ namespace hlsr_console
 					else
 						hlProc.ProcessorAffinity = (IntPtr)coresCount;
 
+					while (string.IsNullOrEmpty(hlProc.MainWindowTitle))
+					{
+						Thread.Sleep(100);
+						hlProc.Refresh();
+					}
+
+					Thread.Sleep(500);
+
 					if (bxt)
 					{
 						Process.Start(new ProcessStartInfo(libraryPath + "\\" + "Bunnymod XT" + "\\" + "Injector.exe"));
 					}
+
 					if (ri)
 					{
 						Process.Start(new ProcessStartInfo(libraryPath + "\\" + "RInput" + "\\" + "RInput.exe")
@@ -171,6 +163,7 @@ namespace hlsr_console
 							Arguments = "hl.exe"
 						});
 					}
+
 					if (livesplit)
 					{
 						Process.Start(new ProcessStartInfo(libraryPath + "\\" + "LiveSplit" + "\\" + "LiveSplit.Register.exe")).WaitForExit();
@@ -179,8 +172,7 @@ namespace hlsr_console
 						if (appID == "50")
 						{
 							splitsName = "Half-Life Opposing Force.lss";
-						}
-						if (appID == "130")
+						}else if (appID == "130")
 						{
 							splitsName = "Half-Life Blue Shift.lss";
 						}
@@ -198,6 +190,14 @@ namespace hlsr_console
 						hl2Proc.ProcessorAffinity = (IntPtr)((1 << Environment.ProcessorCount) - 1);
 					else
 						hl2Proc.ProcessorAffinity = (IntPtr)coresCount;
+
+					while (string.IsNullOrEmpty(hl2Proc.MainWindowTitle))
+					{
+						Thread.Sleep(100);
+						hl2Proc.Refresh();
+					}
+
+					Thread.Sleep(500);
 
 					if (ri)
 					{
