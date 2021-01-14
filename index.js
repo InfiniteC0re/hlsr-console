@@ -10,13 +10,17 @@ class HLSRConsole {
 		];
 	}
 
-	execute(args) {
+	execute(args, cb) {
 		if(!args) args = [];
-		if(fs.existsSync(this.spawn_paths[1])) {
-			this.client = spawn(this.spawn_paths[1], args);	
-		}else{
-			this.client = spawn(this.spawn_paths[0], args);
-		}
+		let client = null;
+
+		if(fs.existsSync(this.spawn_paths[1])) 
+			client = spawn(this.spawn_paths[1], args);	
+		else
+			client = spawn(this.spawn_paths[0], args);
+
+		if(cb)
+			client.on("exit", cb);
 	}
 
 	getCustomization() {
