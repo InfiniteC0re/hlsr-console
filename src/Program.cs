@@ -149,7 +149,7 @@ namespace hlsr_console
 						hlProc.Refresh();
 					}
 
-					Thread.Sleep(500);
+					Thread.Sleep(1000);
 
 					if (bxt)
 					{
@@ -172,12 +172,15 @@ namespace hlsr_console
 						if (appID == "50")
 						{
 							splitsName = "Half-Life Opposing Force.lss";
-						}else if (appID == "130")
+						}
+						else if (appID == "130")
 						{
 							splitsName = "Half-Life Blue Shift.lss";
 						}
 						Process.Start(libraryPath + "\\" + "LiveSplit" + "\\" + "Splits" + "\\" + splitsName);
 					}
+
+					hlProc.WaitForExit();
 				}
 				else
                 {
@@ -197,7 +200,7 @@ namespace hlsr_console
 						hl2Proc.Refresh();
 					}
 
-					Thread.Sleep(500);
+					Thread.Sleep(1000);
 
 					if (ri)
 					{
@@ -212,6 +215,8 @@ namespace hlsr_console
 						Process.Start(new ProcessStartInfo(libraryPath + "\\" + "LiveSplit" + "\\" + "LiveSplit.Register.exe")).WaitForExit();
 						Process.Start(libraryPath + "\\" + "LiveSplit" + "\\" + "Splits" + "\\Half-Life 2.lss");
 					}
+
+					hl2Proc.WaitForExit();
 				}
 			}
 		}
