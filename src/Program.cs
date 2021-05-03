@@ -11,7 +11,7 @@ namespace hlsr_console
 	{
 		static void Main(string[] args)
 		{
-			if(args.Length == 0)
+			if (args.Length == 0)
             {
 				Console.WriteLine("Не было передано аргументов");
 				return;
@@ -100,10 +100,12 @@ namespace hlsr_console
 
 				ProcessStartInfo processStartInfo;
 
-				if (appID != "220")
-					processStartInfo = new ProcessStartInfo(libraryPath + "\\" + "Half-Life" + "\\" + "hl.exe");
-				else
+				if (appID == "220")
 					processStartInfo = new ProcessStartInfo(libraryPath + "\\" + "Half-Life 2" + "\\" + "hl2.exe"); 
+				else if (appID == "218")
+					processStartInfo = new ProcessStartInfo(libraryPath + "\\" + "Ghosting" + "\\SSE\\" + "SSE.exe");
+				else
+					processStartInfo = new ProcessStartInfo(libraryPath + "\\" + "Half-Life" + "\\" + "hl.exe");
 
 				switch (appID)
 				{
@@ -129,14 +131,16 @@ namespace hlsr_console
 						break;
 				}
 
-				processStartInfo.Arguments += " " + startArguments;
+				if (processStartInfo.Arguments.Length > 0)
+					processStartInfo.Arguments += " " + startArguments;
+				else
+					processStartInfo.Arguments = startArguments;
 
-				if (appID != "220")
+				if (appID != "220" && appID != "218")
                 {
 					Process hlProc = Process.Start(processStartInfo);
 
-					if (true)
-						hlProc.PriorityClass = priority;
+					hlProc.PriorityClass = priority;
 
 					if (useAllCores)
 						hlProc.ProcessorAffinity = (IntPtr)((1 << Environment.ProcessorCount) - 1);
@@ -184,10 +188,33 @@ namespace hlsr_console
 				}
 				else
                 {
+					if (appID == "218")
+                    {
+						System.IO.File.WriteAllText(libraryPath + "\\" + "Ghosting" + "\\SSE\\SmartSteamEmu.ini",
+$@"[Launcher]
+Target = ..\hl2.exe
+CommandLine = {processStartInfo.Arguments}
+SteamClientPath = .\SSE.dll
+
+[SmartSteamEmu]
+AppId = 218
+");
+						processStartInfo.Arguments = "";
+					}
+
+					DateTime startTime = DateTime.Now;
 					Process hl2Proc = Process.Start(processStartInfo);
 
-					if (true)
-						hl2Proc.PriorityClass = priority;
+					if (appID == "218")
+					{
+						while (Process.GetProcessesByName("hl2").Length == 0 && (DateTime.Now - startTime).TotalSeconds <= 5) { }
+
+						Process[] processes = Process.GetProcessesByName("hl2");
+						if (processes.Length > 0) hl2Proc = processes.First();
+						else return;
+					}
+
+					hl2Proc.PriorityClass = priority;
 
 					if (useAllCores)
 						hl2Proc.ProcessorAffinity = (IntPtr)((1 << Environment.ProcessorCount) - 1);
@@ -213,7 +240,11 @@ namespace hlsr_console
 					if (livesplit)
 					{
 						Process.Start(new ProcessStartInfo(libraryPath + "\\" + "LiveSplit" + "\\" + "LiveSplit.Register.exe")).WaitForExit();
-						Process.Start(libraryPath + "\\" + "LiveSplit" + "\\" + "Splits" + "\\Half-Life 2.lss");
+						
+						if (appID == "220")
+							Process.Start(libraryPath + "\\" + "LiveSplit" + "\\" + "Splits" + "\\Half-Life 2.lss");
+						else if (appID == "218") 
+							Process.Start(libraryPath + "\\" + "LiveSplit" + "\\" + "Splits" + "\\Half-Life 2 - HL1Movement.lss");
 					}
 
 					hl2Proc.WaitForExit();
