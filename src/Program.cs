@@ -42,6 +42,7 @@ namespace hlsr_console
 				bool dll = false;
 				bool useAllCores = false;
 				bool revEmu = false;
+				bool noEmulators = false;
 				int coresCount = 0x0001;
 
 				ProcessPriorityClass priority = ProcessPriorityClass.Normal;
@@ -81,10 +82,15 @@ namespace hlsr_console
 				}
 				else if (appID == "218")
 				{
+					noEmulators = File.Exists(Path.Combine(ghostingDir, "NoEmulator"));
+					
 					// check if the installed Ghosting has SSE emulator or revEmu emulator
-					revEmu = File.Exists(Path.Combine(ghostingDir, "revLoader.exe"));
+					if (!noEmulators)
+						revEmu = File.Exists(Path.Combine(ghostingDir, "revLoader.exe"));
 
-					if (revEmu)
+					if (noEmulators)
+						processStartInfo = new ProcessStartInfo(Path.Combine(ghostingDir, "hl2.exe"));
+					else if (revEmu)
 						processStartInfo = new ProcessStartInfo(Path.Combine(ghostingDir, "revLoader.exe"));
 					else
 						processStartInfo = new ProcessStartInfo(Path.Combine(ghostingDir, "SSE", "SSE.exe"));
@@ -172,7 +178,7 @@ namespace hlsr_console
 				}
 				else
 				{
-					if (appID == "218" && !revEmu)
+					if (appID == "218" && !noEmulators && !revEmu)
 					{
 						System.IO.File.WriteAllText(Path.Combine(ghostingDir, "SSE", "SmartSteamEmu.ini"),
 $@"[Launcher]
@@ -186,20 +192,19 @@ AppId = 218
 						processStartInfo.Arguments = "";
 					}
 
-					if (revEmu)
+					if (!noEmulators && revEmu)
 						processStartInfo.Arguments = Path.Combine(ghostingDir, "hl2.exe") + " " + processStartInfo.Arguments;
 
 					DateTime startTime = DateTime.Now;
 					Process hl2Proc = Process.Start(processStartInfo);
 
-					if (appID == "218")
+					if (appID == "218" && (revEmu || !noEmulators))
 					{
 						while (Process.GetProcessesByName("hl2").Length == 0 && (DateTime.Now - startTime).TotalSeconds <= 5) { }
 
 						Process[] processes = Process.GetProcessesByName("hl2");
 						if (processes.Length > 0) hl2Proc = processes.First();
 						else return;
-
 					}
 
 					hl2Proc.PriorityClass = priority;
