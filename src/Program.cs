@@ -2,93 +2,194 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 
 namespace hlsr_console
 {
+	class ArgumentsParser
+    {
+		public string mode;
+
+		// patch mode
+		public string patchPath;
+		public string extractPath;
+
+		// game mode
+		public string libraryPath;
+		public string appID;
+		public bool bxt = false;
+		public bool ri = false;
+		public bool livesplit = false;
+		public string splitsDir = "";
+		public bool steam = false;
+		public bool dll = false;
+		public bool useAllCores = false;
+		public int coresCount = 0x0001;
+		public ProcessPriorityClass priority = ProcessPriorityClass.Normal;
+
+		public void ParseArgs(string[] args)
+        {
+			if (args.Length == 0) throw new Exception("No arguments");
+			mode = args[0];
+
+			switch (mode)
+            {
+				case "patch":
+					if (args.Length == 3)
+                    {
+						patchPath = args[1];
+						extractPath = args[2];
+                    }
+					break;
+				case "game":
+					if (args.Length >= 3)
+					{
+						libraryPath = args[1];
+						appID = args[2];
+					}
+					break;
+				default:
+					throw new Exception("Unknown mode");
+            }
+
+			if (mode == "game")
+            {
+				for (int i = 0; i < args.Length; i++)
+				{
+					switch (args[i])
+                    {
+						case "-bxt":
+							bxt = true;
+							break;
+						case "-ri":
+							ri = true;
+							break;
+						case "-livesplit":
+							livesplit = true;
+							if (++i < args.Length) splitsDir = args[i];
+							break;
+						case "-steam":
+							steam = true;
+							break;
+						case "-dll":
+							dll = true;
+							break;
+						case "-allcores":
+							useAllCores = true;
+							break;
+						case "-onecore":
+							coresCount = 0x0001;
+							break;
+						case "-twocores":
+							coresCount = 0x0003;
+							break;
+						case "-threecores":
+							coresCount = 0x0007;
+							break;
+						case "-fourcores":
+							coresCount = 0x000F;
+							break;
+						case "-normal":
+							priority = ProcessPriorityClass.Normal;
+							break;
+						case "-abovenormal":
+							priority = ProcessPriorityClass.AboveNormal;
+							break;
+						case "-high":
+							priority = ProcessPriorityClass.High;
+							break;
+						case "-realtime":
+							priority = ProcessPriorityClass.RealTime;
+							break;
+					}
+				}
+            }
+        }
+	}
+
 	class Program
 	{
 		static void Main(string[] args)
 		{
-			if (args.Length == 0)
+			ArgumentsParser parser = new ArgumentsParser();
+			parser.ParseArgs(args);
+
+			if (parser.mode == "patch")
 			{
-				Console.WriteLine("Не было передано аргументов");
-				return;
-			}
+				string[] patchFiles = Directory.GetFiles(parser.patchPath);
 
-			string mode = args[0];
-
-			if (mode == "patch")
-			{
-				string patchPath = args[1];
-				string extractPath = args[2];
-
-				string[] patchFiles = Directory.GetFiles(patchPath);
 				for (int i = 0; i < patchFiles.Length; i++)
-				{
-					string newPath = extractPath + "\\" + patchFiles[i].Split('\\').Last();
-					File.Copy(patchFiles[i], newPath, true);
-				}
+					File.Copy(patchFiles[i], Path.Combine(parser.extractPath, patchFiles[i].Split('\\').Last()), true);
 			}
-			else if (mode == "game")
+			else if (parser.mode == "game")
 			{
-				string libraryPath = args[1];
-				string appID = args[2];
-				bool bxt = false;
-				bool ri = false;
-				bool livesplit = false;
-				bool steam = false;
-				bool dll = false;
-				bool useAllCores = false;
 				bool revEmu = false;
-				bool noEmulators = false;
-				int coresCount = 0x0001;
-
-				ProcessPriorityClass priority = ProcessPriorityClass.Normal;
+				bool noEmulator = false;
 				string startArguments = args.Last();
 
-				if (args.Contains("-bxt")) bxt = true;
-				if (args.Contains("-ri")) ri = true;
-				if (args.Contains("-livesplit")) livesplit = true;
-				if (args.Contains("-steam")) steam = true;
-				if (args.Contains("-dll")) dll = true;
-
-				if (args.Contains("-allcores")) useAllCores = true;
-				else if (args.Contains("-onecore")) coresCount = 0x0001;
-				else if (args.Contains("-twocores")) coresCount = 0x0003;
-				else if (args.Contains("-threecores")) coresCount = 0x0007;
-				else if (args.Contains("-fourcores")) coresCount = 0x000F;
-
-				if (args.Contains("-normal")) priority = ProcessPriorityClass.Normal;
-				else if (args.Contains("-abovenormal")) priority = ProcessPriorityClass.AboveNormal;
-				else if (args.Contains("-high")) priority = ProcessPriorityClass.High;
-				else if (args.Contains("-realtime")) priority = ProcessPriorityClass.RealTime;
-
+				Process proc;
 				ProcessStartInfo processStartInfo;
-				string ghostingDir = Path.Combine(libraryPath, "Ghosting");
-				string bxtPath = Path.Combine(libraryPath, "Bunnymod XT", "Injector.exe");
-				string rinputPath = Path.Combine(libraryPath, "RInput", "RInput.exe");
-				string livesplitPath = Path.Combine(libraryPath, "LiveSplit", "LiveSplit.Register.exe");
-				string livesplitSplitsDir = Path.Combine(libraryPath, "LiveSplit", "Splits");
+				string ghostingDir = Path.Combine(parser.libraryPath, "Ghosting");
+				string bxtPath = Path.Combine(parser.libraryPath, "Bunnymod XT", "Injector.exe");
+				string rinputPath = Path.Combine(parser.libraryPath, "RInput", "RInput.exe");
+				string livesplitPath = Path.Combine(parser.libraryPath, "LiveSplit", "LiveSplit.Register.exe");
+				string livesplitSplitsDir = Path.Combine(parser.libraryPath, "LiveSplit", "Splits");
+				string splitsDir = "";
+				string targetProcessName;
 
-				if (!File.Exists(bxtPath)) bxt = false;
-				if (!File.Exists(rinputPath)) ri = false;
-				if (!File.Exists(livesplitPath)) livesplit = false;
+				if (parser.bxt) parser.bxt = File.Exists(bxtPath);
+				if (parser.ri) parser.ri = File.Exists(rinputPath);
+				if (parser.livesplit) parser.livesplit = File.Exists(livesplitPath);
 
-				if (appID == "220")
-				{
-					processStartInfo = new ProcessStartInfo(Path.Combine(libraryPath, "Half-Life 2", "hl2.exe"));
+				if (parser.livesplit)
+                {
+					// check the splits file exists
+					if (parser.splitsDir.EndsWith(".lss"))
+						if (File.Exists(parser.splitsDir))
+							splitsDir = parser.splitsDir;
+					else splitsDir = "";
+
+					if (string.IsNullOrEmpty(splitsDir))
+                    {
+						string splitsName;
+
+						switch (parser.appID)
+                        {
+							case "50":
+								splitsName = "Half-Life Opposing Force.lss";
+								break;
+							case "130":
+								splitsName = "Half-Life Blue Shift.lss";
+								break;
+							case "218":
+								splitsName = "Half-Life 2 - HL1Movement.lss";
+								break;
+							case "220":
+								splitsName = "Half-Life 2.lss";
+								break;
+							default:
+								splitsName = "Half-Life.lss";
+								break;
+						}
+
+						splitsDir = Path.Combine(livesplitSplitsDir, splitsName);
+					}
 				}
-				else if (appID == "218")
+
+				if (parser.appID == "220")
 				{
-					noEmulators = File.Exists(Path.Combine(ghostingDir, "NoEmulator"));
+					targetProcessName = "hl2.exe";
+					processStartInfo = new ProcessStartInfo(Path.Combine(parser.libraryPath, "Half-Life 2", "hl2.exe"));
+				}
+				else if (parser.appID == "218")
+				{
+					targetProcessName = "hl2.exe";
+					noEmulator = File.Exists(Path.Combine(ghostingDir, "NoEmulator"));
 					
 					// check if the installed Ghosting has SSE emulator or revEmu emulator
-					if (!noEmulators)
-						revEmu = File.Exists(Path.Combine(ghostingDir, "revLoader.exe"));
+					if (!noEmulator) revEmu = File.Exists(Path.Combine(ghostingDir, "revLoader.exe"));
 
-					if (noEmulators)
+					if (noEmulator)
 						processStartInfo = new ProcessStartInfo(Path.Combine(ghostingDir, "hl2.exe"));
 					else if (revEmu)
 						processStartInfo = new ProcessStartInfo(Path.Combine(ghostingDir, "revLoader.exe"));
@@ -97,24 +198,19 @@ namespace hlsr_console
 				}
 				else
 				{
-					processStartInfo = new ProcessStartInfo(Path.Combine(libraryPath, "Half-Life", "hl.exe"));
+					targetProcessName = "hl.exe";
+					processStartInfo = new ProcessStartInfo(Path.Combine(parser.libraryPath, "Half-Life", "hl.exe"));
 				}
 
-				switch (appID)
+				switch (parser.appID)
 				{
 					case "70":
-						if (steam)
-							processStartInfo.Arguments = "-game valve";
-						else if (dll)
-							processStartInfo.Arguments = "-game valve_WON_edited";
-						else
-							processStartInfo.Arguments = "-game valve_WON";
+						if (parser.steam) processStartInfo.Arguments = "-game valve";
+						else if (parser.dll) processStartInfo.Arguments = "-game valve_WON_edited";
+						else processStartInfo.Arguments = "-game valve_WON";
 						break;
 					case "50":
-						if (steam)
-							processStartInfo.Arguments = "-game gearbox";
-						else
-							processStartInfo.Arguments = "-game gearbox_WON";
+						processStartInfo.Arguments = parser.steam ? "-game gearbox" : "-game gearbox_WON";
 						break;
 					case "130":
 						processStartInfo.Arguments = "-game bshift";
@@ -124,120 +220,66 @@ namespace hlsr_console
 						break;
 				}
 
-				if (processStartInfo.Arguments.Length > 0)
+				if (!string.IsNullOrEmpty(processStartInfo.Arguments)) 
 					processStartInfo.Arguments += " " + startArguments;
-				else
-					processStartInfo.Arguments = startArguments;
+				else processStartInfo.Arguments = startArguments;
 
-				if (appID != "220" && appID != "218")
+				if (targetProcessName == "hl.exe")
 				{
-					Process hlProc = Process.Start(processStartInfo);
-
-					hlProc.PriorityClass = priority;
-
-					if (useAllCores)
-						hlProc.ProcessorAffinity = (IntPtr)((1 << Environment.ProcessorCount) - 1);
-					else
-						hlProc.ProcessorAffinity = (IntPtr)coresCount;
-
-					while (string.IsNullOrEmpty(hlProc.MainWindowTitle))
-					{
-						Thread.Sleep(100);
-						hlProc.Refresh();
-					}
-
-					Thread.Sleep(1000);
-
-					if (bxt)
-					{
-						Process.Start(new ProcessStartInfo(bxtPath));
-					}
-
-					if (ri)
-					{
-						Process.Start(new ProcessStartInfo(rinputPath)
-						{
-							Arguments = "hl.exe"
-						});
-					}
-
-					if (livesplit)
-					{
-						Process.Start(new ProcessStartInfo(livesplitPath)).WaitForExit();
-						string splitsName = "Half-Life.lss";
-
-						if (appID == "50")
-							splitsName = "Half-Life Opposing Force.lss";
-						else if (appID == "130")
-							splitsName = "Half-Life Blue Shift.lss";
-
-						Process.Start(Path.Combine(livesplitSplitsDir, splitsName));
-					}
-
-					hlProc.WaitForExit();
+					proc = Process.Start(processStartInfo);
 				}
 				else
 				{
-					if (appID == "218" && !noEmulators && !revEmu)
+					bool sseEmu = !noEmulator && !revEmu;
+					if (parser.appID == "218" && sseEmu)
 					{
-						System.IO.File.WriteAllText(Path.Combine(ghostingDir, "SSE", "SmartSteamEmu.ini"),
-$@"[Launcher]
-Target = ..\hl2.exe
-CommandLine = {processStartInfo.Arguments}
-SteamClientPath = .\SSE.dll
-
-[SmartSteamEmu]
-AppId = 218
-");
+						System.IO.File.WriteAllText(Path.Combine(ghostingDir, "SSE", "SmartSteamEmu.ini"), $"[Launcher]\nTarget = ..\\hl2.exe\nCommandLine = {processStartInfo.Arguments}\nSteamClientPath = .\\SSE.dll\n\n[SmartSteamEmu]\nAppId = 218");
 						processStartInfo.Arguments = "";
 					}
 
-					if (!noEmulators && revEmu)
+					if (revEmu)
 						processStartInfo.Arguments = Path.Combine(ghostingDir, "hl2.exe") + " " + processStartInfo.Arguments;
 
 					DateTime startTime = DateTime.Now;
-					Process hl2Proc = Process.Start(processStartInfo);
+					proc = Process.Start(processStartInfo);
 
-					if (appID == "218" && (revEmu || !noEmulators))
+					if (parser.appID == "218" && (revEmu || !noEmulator))
 					{
-						while (Process.GetProcessesByName("hl2").Length == 0 && (DateTime.Now - startTime).TotalSeconds <= 5) { }
+						while (Process.GetProcessesByName("hl2").Length == 0 && (DateTime.Now - startTime).TotalSeconds <= 6) { }
 
 						Process[] processes = Process.GetProcessesByName("hl2");
-						if (processes.Length > 0) hl2Proc = processes.First();
+						if (processes.Length > 0) proc = processes.First();
 						else return;
 					}
-
-					hl2Proc.PriorityClass = priority;
-
-					if (useAllCores)
-						hl2Proc.ProcessorAffinity = (IntPtr)((1 << Environment.ProcessorCount) - 1);
-					else
-						hl2Proc.ProcessorAffinity = (IntPtr)coresCount;
-
-					while (string.IsNullOrEmpty(hl2Proc.MainWindowTitle))
-					{
-						Thread.Sleep(100);
-						hl2Proc.Refresh();
-					}
-
-					Thread.Sleep(1000);
-
-					if (ri)
-					{
-						Process.Start(new ProcessStartInfo(rinputPath)
-						{
-							Arguments = "hl2.exe"
-						});
-					}
-
-					if (livesplit)
-					{
-						Process.Start(new ProcessStartInfo(livesplitPath)).WaitForExit();
-						Process.Start(Path.Combine(livesplitSplitsDir, appID == "220" ? "Half-Life 2.lss" : "Half-Life 2 - HL1Movement.lss"));
-					}
-
-					hl2Proc.WaitForExit();
 				}
+
+				proc.PriorityClass = parser.priority;
+
+				if (parser.useAllCores)
+					proc.ProcessorAffinity = (IntPtr)((1 << Environment.ProcessorCount) - 1);
+				else
+					proc.ProcessorAffinity = (IntPtr)parser.coresCount;
+
+				while (string.IsNullOrEmpty(proc.MainWindowTitle))
+				{
+					Thread.Sleep(100);
+					proc.Refresh();
+				}
+
+				Thread.Sleep(1000);
+
+				if (parser.bxt)
+					Process.Start(new ProcessStartInfo(bxtPath));
+				if (parser.ri)
+					Process.Start(new ProcessStartInfo(rinputPath, targetProcessName));
+
+				if (parser.livesplit)
+				{
+					Process.Start(new ProcessStartInfo(livesplitPath)).WaitForExit();
+					Process.Start(splitsDir);
+				}
+
+				proc.WaitForExit();
 			}
 		}
 	}
